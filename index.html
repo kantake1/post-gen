@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{margin:0}</style>
+<title>ポスター工房</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=DotGothic16&family=Noto+Sans+JP:wght@500;700;900&family=Shippori+Mincho+B1:wght@800&family=Zen+Antique&family=Zen+Maru+Gothic:wght@900&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<style>
+/* layout: 左に操作パネル、右にポスターのプレビュー(スクロール追従)。狭い幅ではプレビューが上 */
+:root {
+  --bg: #f3f4f8; --panel: #ffffff; --fg: #171a2b; --muted: #636985;
+  --line: #dcdfea; --accent: #2f3fd0; --on-accent: #ffffff; --stage: #e4e6f0;
+  --ui: "Noto Sans JP", system-ui, -apple-system, "Hiragino Sans", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1120; --panel: #171a2e; --fg: #eceefb; --muted: #9aa0c0;
+    --line: #2a2e4a; --accent: #8c98ff; --on-accent: #0f1120; --stage: #0a0b17; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1120; --panel: #171a2e; --fg: #eceefb; --muted: #9aa0c0;
+  --line: #2a2e4a; --accent: #8c98ff; --on-accent: #0f1120; --stage: #0a0b17; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--ui); font-size: 14px; line-height: 1.6; padding-inline: 16px; padding-block: 16px 40px; }
+h1 { font-size: 20px; font-weight: 900; letter-spacing: .04em; margin: 0; }
+header { max-width: 1280px; margin: 0 auto 16px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+header p { margin: 0; color: var(--muted); font-size: 13px; }
+.app { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 20px; align-items: start; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; min-width: 0; }
+.group { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.group:last-child { border-bottom: 0; }
+.group > h2 { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .12em; color: var(--muted); }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+input[type=text], textarea, select { width: 100%; font: inherit; font-size: 14px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; }
+textarea { resize: vertical; min-height: 60px; }
+input[type=color] { width: 100%; height: 34px; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row > * { flex: 1 1 0; min-width: 0; }
+.btn { font: inherit; font-weight: 700; font-size: 13px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; cursor: pointer; text-align: center; text-decoration: none; display: inline-block; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.tpls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.tpl { font: inherit; text-align: left; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; cursor: pointer; display: flex; flex-direction: column; }
+.tpl b { font-size: 14px; }
+.tpl span { font-size: 11px; color: var(--muted); }
+.tpl[aria-pressed=true] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { flex: 1; font: inherit; font-size: 13px; color: var(--fg); background: var(--bg); border: 0; border-right: 1px solid var(--line); padding: 6px; cursor: pointer; }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed=true] { background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.pals { display: flex; gap: 8px; flex-wrap: wrap; }
+.pal { width: 44px; height: 30px; border-radius: 6px; border: 1px solid var(--line); cursor: pointer; padding: 0; }
+.stage { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); background: var(--stage); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 0; }
+#cv { display: block; max-width: 100%; max-height: calc(100vh - 150px); width: auto; height: auto; box-shadow: 0 6px 30px rgba(0,0,0,.28); }
+.meta { margin: 0; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.modal { position: fixed; inset: 0; background: rgba(8,10,24,.66); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+.sheet { background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; width: min(720px, 100%); max-height: 100%; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.sheet-head h2 { margin: 0; font-size: 16px; }
+.sheet img.out { max-width: 100%; max-height: 52vh; width: auto; height: auto; align-self: center; border: 1px solid var(--line); }
+.sheet textarea { min-height: 220px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.note { margin: 0; font-size: 12px; color: var(--muted); }
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .stage { position: static; order: -1; padding: 12px; }
+  #cv { max-height: 60vh; }
+}
+@media (prefers-reduced-motion: no-preference) { .btn, .tpl { transition: border-color .15s; } }
+</style>
+
+</head>
+<body>
+<header>
+  <h1>ポスター工房</h1>
+  <p>見出しを決めて、型を選ぶ。PNG・PDFで書き出せます。</p>
+</header>
+
+<main class="app">
+  <div class="panel">
+    <section class="group">
+      <h2>サイズ</h2>
+      <select id="size" data-k="size" aria-label="サイズ"></select>
+    </section>
+    <section class="group">
+      <h2>テンプレート</h2>
+      <div class="tpls" id="tpls"></div>
+    </section>
+    <section class="group">
+      <h2>テキスト</h2>
+      <label>見出し(改行で行を分ける)<textarea id="head" data-k="head" rows="3"></textarea></label>
+      <label>サブコピー<input type="text" id="sub" data-k="sub"></label>
+      <label>詳細(日時・場所など)<textarea id="details" data-k="details" rows="3"></textarea></label>
+      <div class="seg" id="align" role="group" aria-label="配置">
+        <button type="button" data-v="left">左</button><button type="button" data-v="center">中央</button><button type="button" data-v="right">右</button>
+      </div>
+      <label>フォント<select id="font" data-k="font"></select></label>
+    </section>
+    <section class="group">
+      <h2>配色</h2>
+      <div class="pals" id="pals"></div>
+      <div class="row">
+        <label>背景<input type="color" id="bg" data-k="bg"></label>
+        <label>文字<input type="color" id="fg" data-k="fg"></label>
+        <label>強調<input type="color" id="accent" data-k="accent"></label>
+      </div>
+    </section>
+    <section class="group">
+      <h2>画像・ロゴ</h2>
+      <input type="file" id="file" accept="image/*" aria-label="画像を選ぶ">
+      <div class="row">
+        <label>収まり<select id="fit" data-k="fit"><option value="cover">全面に敷く</option><option value="contain">全体を表示</option></select></label>
+        <button type="button" class="btn" id="imgClear" style="align-self:end">画像を外す</button>
+      </div>
+    </section>
+    <section class="group">
+      <h2>QRコード</h2>
+      <label>URL(空欄で非表示)<input type="text" id="qr" data-k="qr" placeholder="https://"></label>
+    </section>
+    <section class="group">
+      <h2>書き出し</h2>
+      <div class="row">
+        <button type="button" class="btn primary" id="expPng">PNG</button>
+        <button type="button" class="btn primary" id="expPdf">PDF</button>
+      </div>
+      <button type="button" class="btn" id="expJson">編集状態の保存・読込</button>
+    </section>
+  </div>
+
+  <div class="stage">
+    <canvas id="cv" aria-label="ポスターのプレビュー"></canvas>
+    <p class="meta" id="meta"></p>
+  </div>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="sheet-head"><h2 id="mTitle"></h2><button type="button" class="btn" id="mClose">閉じる</button></div>
+    <div id="mBody" style="display:flex;flex-direction:column;gap:12px"></div>
+  </div>
+</div>
+
+<script>
+const SIZES = [
+  { id: 'a4p', label: 'A4 縦', w: 1654, h: 2339, mm: [210, 297] },
+  { id: 'a4l', label: 'A4 横', w: 2339, h: 1654, mm: [297, 210] },
+  { id: 'a3p', label: 'A3 縦', w: 2339, h: 3307, mm: [297, 420] },
+  { id: 'a3l', label: 'A3 横', w: 3307, h: 2339, mm: [420, 297] },
+  { id: 'sq', label: 'SNS 正方形 1080×1080', w: 1080, h: 1080 },
+  { id: 'story', label: 'SNS 縦長 1080×1920', w: 1080, h: 1920 },
+];
+const FONTS = {
+  dela: { label: 'デラゴシック(極太)', fam: 'Dela Gothic One', w: 400 },
+  noto: { label: 'ノトサンズ(極太ゴシック)', fam: 'Noto Sans JP', w: 900 },
+  maru: { label: 'ゼン丸ゴシック', fam: 'Zen Maru Gothic', w: 900 },
+  mincho: { label: 'しっぽり明朝', fam: 'Shippori Mincho B1', w: 800 },
+  antique: { label: 'ゼンアンティーク', fam: 'Zen Antique', w: 400 },
+  dot: { label: 'ドットゴシック16', fam: 'DotGothic16', w: 400 },
+};
+const TPLS = [
+  { id: 'type', name: '活字', d: '見出しを横幅いっぱいに' },
+  { id: 'block', name: 'ブロック', d: '色面に反転文字' },
+  { id: 'circle', name: '円', d: '大きな円と文字' },
+  { id: 'photo', name: '写真', d: '全面写真と下置き文字' },
+  { id: 'stripes', name: 'ストライプ', d: '斜線と枠' },
+  { id: 'vertical', name: '縦書き', d: '右から左へ' },
+];
+const PALS = [
+  ['藍と黄', '#16205b', '#f5f3ea', '#ffcf3f'],
+  ['墨と朱', '#121212', '#f2ede4', '#e8472b'],
+  ['紙と青', '#f1efe9', '#16181d', '#2447e0'],
+  ['若草', '#0f3d2e', '#f3f1e3', '#c8f169'],
+  ['桃', '#ffd9e0', '#2a1021', '#e0245e'],
+];
+const DEFAULTS = {
+  size: 'a4p', tpl: 'type', font: 'dela', align: 'left',
+  head: '言葉は\n街に\n灯る', sub: 'ことばのポスター展 2026(サンプル)',
+  details: '10.24 SAT – 11.03 SUN\n会場名はここに / 入場無料\n詳細はQRコードから',
+  bg: PALS[0][1], fg: PALS[0][2], accent: PALS[0][3],
+  fit: 'cover', qr: 'https://example.com', img: '',
+};
+const $ = id => document.getElementById(id);
+let S = { ...DEFAULTS };
+try { const t = localStorage.getItem('poster-kobo'); if (t) S = { ...DEFAULTS, ...pick(JSON.parse(t)) }; } catch (e) {}
+function pick(o) { const r = {}; for (const k in DEFAULTS) if (o && typeof o[k] === typeof DEFAULTS[k]) r[k] = o[k]; return r; }
+
+let imgEl = null;
+function setImg(src) {
+  S.img = src || '';
+  if (!src) { imgEl = null; return schedule(); }
+  const im = new Image();
+  im.onload = () => { imgEl = im; schedule(); };
+  im.src = src;
+}
+
+/* ---------- UI ---------- */
+SIZES.forEach(s => $('size').add(new Option(s.label, s.id)));
+Object.entries(FONTS).forEach(([k, f]) => $('font').add(new Option(f.label, k)));
+TPLS.forEach(t => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'tpl'; b.dataset.id = t.id;
+  b.innerHTML = `<b>${t.name}</b><span>${t.d}</span>`;
+  b.onclick = () => { S.tpl = t.id; syncUI(); schedule(); };
+  $('tpls').append(b);
+});
+PALS.forEach(([n, bg, fg, ac]) => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'pal'; b.title = n; b.setAttribute('aria-label', n);
+  b.style.background = `linear-gradient(90deg, ${bg} 0 34%, ${fg} 34% 67%, ${ac} 67%)`;
+  b.onclick = () => { Object.assign(S, { bg, fg, accent: ac }); syncUI(); schedule(); };
+  $('pals').append(b);
+});
+document.querySelectorAll('[data-k]').forEach(el => {
+  el.addEventListener('input', () => { S[el.dataset.k] = el.value; schedule(); });
+});
+document.querySelectorAll('#align button').forEach(b => b.onclick = () => { S.align = b.dataset.v; syncUI(); schedule(); });
+$('file').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 1600 / Math.max(im.width, im.height));
+      const c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      setImg(c.toDataURL(f.type === 'image/png' ? 'image/png' : 'image/jpeg', .85));
+    };
+    im.src = r.result;
+  };
+  r.readAsDataURL(f);
+};
+$('imgClear').onclick = () => { $('file').value = ''; setImg(''); };
+function syncUI() {
+  document.querySelectorAll('[data-k]').forEach(el => { el.value = S[el.dataset.k]; });
+  document.querySelectorAll('.tpl').forEach(b => b.setAttribute('aria-pressed', b.dataset.id === S.tpl));
+  document.querySelectorAll('#align button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === S.align));
+}
+
+/* ---------- 描画 ---------- */
+const hexA = (h, a) => { const n = parseInt(h.slice(1), 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
+const dims = () => SIZES.find(s => s.id === S.size) || SIZES[0];
+const VMAP = { 'ー': '｜', '—': '｜', '―': '｜', '「': '﹁', '」': '﹂', '『': '﹃', '』': '﹄', '（': '︵', '）': '︶', '(': '︵', ')': '︶', '…': '︙', '～': '︴' };
+let qrCache = { url: null, q: null };
+function qrFor(url) {
+  if (qrCache.url === url) return qrCache.q;
+  let q = null;
+  try { q = qrcode(0, 'M'); q.addData(url); q.make(); } catch (e) { q = null; }
+  qrCache = { url, q }; return q;
+}
+async function ensureFonts() {
+  const f = FONTS[S.font], t = S.head + S.sub + S.details;
+  try {
+    await Promise.all([
+      document.fonts.load(`${f.w} 40px "${f.fam}"`, t),
+      document.fonts.load('700 40px "Noto Sans JP"', t),
+      document.fonts.load('500 40px "Noto Sans JP"', t),
+    ]);
+  } catch (e) {}
+}
+function wrap(ctx, text, maxW) {
+  const out = [];
+  for (const para of text.split('\n')) {
+    let line = '';
+    for (const tk of para.match(/[\x21-\x7e]+|\s+|[^\x00-\x7f]/gu) || ['']) {
+      if (line && ctx.measureText(line + tk).width > maxW) { out.push(line.trimEnd()); line = tk.trimStart(); }
+      else line += tk;
+    }
+    out.push(line.trimEnd());
+  }
+  return out.filter((l, i) => l || i < out.length - 1);
+}
+
+function draw(ctx, W, H) {
+  const F = FONTS[S.font], U = Math.min(W, H), m = U * 0.075, gap = m * 0.5, tpl = S.tpl;
+  const hf = px => `${F.w} ${px}px "${F.fam}", "Noto Sans JP", sans-serif`;
+  const bf = (px, w = 500) => `${w} ${px}px "Noto Sans JP", sans-serif`;
+  const lines = S.head.split('\n').map(s => s.trim()).filter(Boolean);
+  const qr = S.qr.trim() ? qrFor(S.qr.trim()) : null;
+  const hasFoot = !!(qr || S.details.trim());
+  const fh = hasFoot ? U * 0.16 : 0;
+  const foot = { x: m, y: H - m - fh, w: W - 2 * m, h: fh };
+  const body = { x: m, y: m, w: W - 2 * m, h: H - 2 * m - (fh ? fh + gap * 1.5 : 0) };
+  const photo = tpl === 'photo';
+  const img = imgEl && !photo ? imgEl : null;
+
+  // 領域分割
+  let head = body, imgBox = null;
+  if (img) {
+    if (W >= H * 1.15) { const hw = body.w * 0.56; head = { ...body, w: hw }; imgBox = { x: body.x + hw + gap, y: body.y, w: body.w - hw - gap, h: body.h }; }
+    else { const hh = body.h * 0.55; head = { ...body, h: hh }; imgBox = { x: body.x, y: body.y + hh + gap, w: body.w, h: body.h - hh - gap }; }
+  } else if (photo) { head = { ...body, y: body.y + body.h * 0.35, h: body.h * 0.65 }; }
+
+  const drawImg = (r, mode) => {
+    const k = (mode === 'contain' ? Math.min : Math.max)(r.w / imgEl.width, r.h / imgEl.height);
+    const w = imgEl.width * k, h = imgEl.height * k;
+    ctx.save(); ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
+    ctx.drawImage(imgEl, r.x + (r.w - w) / 2, r.y + (r.h - h) / 2, w, h); ctx.restore();
+  };
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = S.bg; ctx.fillRect(0, 0, W, H);
+  let headCol = S.fg, accCol = S.accent, subCol = S.accent, va = 0.5;
+
+  if (tpl === 'type') {
+    ctx.fillStyle = S.accent; ctx.fillRect(0, 0, W, m * 0.35);
+  } else if (tpl === 'block') {
+    ctx.fillStyle = S.accent; ctx.fillRect(0, 0, W, fh ? foot.y - gap : H);
+    headCol = S.bg; accCol = S.bg; subCol = S.bg;
+  } else if (tpl === 'circle') {
+    const r = Math.min(head.w * 1.15, head.h * 1.25) / 2;
+    ctx.fillStyle = S.accent; ctx.beginPath(); ctx.arc(head.x + head.w * 0.62, head.y + head.h * 0.45, r, 0, 7); ctx.fill();
+    subCol = S.fg; accCol = S.fg;
+  } else if (photo) {
+    if (imgEl) drawImg({ x: 0, y: 0, w: W, h: H }, S.fit);
+    else { const g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, S.accent); g.addColorStop(1, S.bg); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+    const g = ctx.createLinearGradient(0, H * 0.2, 0, H);
+    g.addColorStop(0, hexA(S.bg, 0)); g.addColorStop(0.85, hexA(S.bg, 0.92)); g.addColorStop(1, hexA(S.bg, 0.96));
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    va = 1;
+  } else if (tpl === 'stripes') {
+    const D = Math.hypot(W, H), sp = U * 0.05;
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.rotate(-Math.PI / 4); ctx.fillStyle = hexA(S.accent, 0.2);
+    for (let x = -D; x < D; x += sp) ctx.fillRect(x, -D, sp / 2, 2 * D);
+    ctx.restore();
+    ctx.strokeStyle = S.accent; ctx.lineWidth = U * 0.006;
+    ctx.strokeRect(m * 0.45, m * 0.45, W - m * 0.9, H - m * 0.9);
+  }
+  if (img) drawImg(imgBox, S.fit);
+
+  // サブコピー(見出し領域の下端)
+  ctx.textBaseline = 'middle';
+  const subSize = U * 0.036;
+  ctx.font = bf(subSize, 700);
+  const subLines = S.sub.trim() ? wrap(ctx, S.sub.trim(), head.w).slice(0, 3) : [];
+  const subH = subLines.length ? subLines.length * subSize * 1.45 + gap : 0;
+  const box = { x: head.x, y: head.y, w: head.w, h: head.h - subH };
+  const ax = S.align === 'left' ? head.x : S.align === 'right' ? head.x + head.w : head.x + head.w / 2;
+  ctx.textAlign = S.align;
+  ctx.fillStyle = subCol;
+  subLines.forEach((l, i) => ctx.fillText(l, ax, head.y + head.h - subH + gap + (i + 0.5) * subSize * 1.45));
+
+  // 見出し
+  const n = lines.length;
+  if (n && tpl === 'vertical') {
+    const cols = lines.map(l => Array.from(l)), maxLen = Math.max(...cols.map(c => c.length));
+    const s = Math.min(box.h / (maxLen * 1.06), box.w / (n * 1.25), U * 0.3), colW = s * 1.25;
+    const right = S.align === 'left' ? box.x + n * colW : S.align === 'right' ? box.x + box.w : box.x + box.w / 2 + n * colW / 2;
+    ctx.font = hf(s); ctx.textAlign = 'center';
+    cols.forEach((chars, ci) => {
+      ctx.fillStyle = n > 1 && ci === n - 1 ? accCol : headCol;
+      const cx = right - (ci + 0.5) * colW;
+      chars.forEach((ch, j) => {
+        let dx = 0, dy = 0;
+        if ('、。，．'.includes(ch)) { dx = s * 0.5; dy = -s * 0.5; }
+        ctx.fillText(VMAP[ch] || ch, cx + dx, box.y + (j + 0.5) * s * 1.06 + dy);
+      });
+    });
+  } else if (n) {
+    const lh = 1.08;
+    ctx.font = hf(100);
+    let size = box.h / (n * lh);
+    for (const l of lines) size = Math.min(size, 100 * box.w / Math.max(1, ctx.measureText(l).width));
+    ctx.font = hf(size); ctx.textAlign = S.align;
+    const y0 = box.y + (box.h - n * size * lh) * va;
+    lines.forEach((l, i) => {
+      ctx.fillStyle = n > 1 && i === n - 1 ? accCol : headCol;
+      ctx.fillText(l, ax, y0 + (i + 0.5) * size * lh);
+    });
+  }
+
+  // フッター(詳細 + QR)
+  if (hasFoot) {
+    ctx.fillStyle = hexA(S.fg, 0.35); ctx.fillRect(foot.x, foot.y - gap * 0.75, foot.w, Math.max(1, U * 0.002));
+    const tw = foot.w - (qr ? fh + gap : 0);
+    if (S.details.trim()) {
+      let ds = U * 0.027; ctx.font = bf(ds);
+      const dl = wrap(ctx, S.details.trim(), tw);
+      ds = Math.min(ds, fh / (dl.length * 1.5)); ctx.font = bf(ds);
+      ctx.fillStyle = S.fg; ctx.textAlign = 'left';
+      dl.forEach((l, i) => ctx.fillText(l, foot.x, foot.y + (i + 0.5) * ds * 1.5));
+    }
+    if (qr) {
+      const x = foot.x + foot.w - fh, pad = fh * 0.07, cnt = qr.getModuleCount(), cell = (fh - 2 * pad) / cnt;
+      ctx.fillStyle = '#fff'; ctx.fillRect(x, foot.y, fh, fh); ctx.fillStyle = '#000';
+      for (let r = 0; r < cnt; r++) for (let c = 0; c < cnt; c++)
+        if (qr.isDark(r, c)) ctx.fillRect(x + pad + c * cell, foot.y + pad + r * cell, cell + 0.4, cell + 0.4);
+    }
+  }
+}
+
+const cv = $('cv');
+let raf = 0, tick = 0;
+function schedule() { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); }
+async function render() {
+  const id = ++tick; await ensureFonts(); if (id !== tick) return;
+  const d = dims(), k = Math.min(1, 1100 / Math.max(d.w, d.h));
+  cv.width = Math.round(d.w * k); cv.height = Math.round(d.h * k);
+  draw(cv.getContext('2d'), cv.width, cv.height);
+  $('meta').textContent = `${d.label} · ${d.w} × ${d.h} px` + (d.mm ? ' · 200dpi' : '');
+  try { localStorage.setItem('poster-kobo', JSON.stringify(S)); } catch (e) {}
+}
+async function renderFull() {
+  await ensureFonts();
+  const d = dims(), c = document.createElement('canvas'); c.width = d.w; c.height = d.h;
+  draw(c.getContext('2d'), d.w, d.h); return c;
+}
+
+/* ---------- 書き出し ---------- */
+function openModal(title, html) { $('mTitle').textContent = title; $('mBody').innerHTML = html; $('modal').hidden = false; }
+const closeModal = () => { $('modal').hidden = true; };
+$('mClose').onclick = closeModal;
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+const SAVE_NOTE = '<p class="note">保存できない場合は、画像を右クリック(スマホは長押し)で保存してください。</p>';
+// ビューアでは downloads 機能、ローカルで開いた場合は <a download> で保存する
+async function saveFile(name, blob, msg, alt) {
+  try {
+    const dl = window.claude && await window.claude.use('downloads');
+    if (dl) { await dl.save({ filename: name, data: blob }); msg.textContent = '保存しました。'; return; }
+    if (window.claude) { msg.textContent = alt; return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  } catch (e) { msg.textContent = e && e.code === 'declined' ? '保存をキャンセルしました。' : '保存できませんでした。'; }
+}
+
+$('expPng').onclick = async () => {
+  const c = await renderFull(), url = c.toDataURL('image/png');
+  openModal('PNGを書き出し', `<img class="out" src="${url}" alt="書き出し結果"><p class="note">${c.width} × ${c.height} px</p>
+    <div class="row"><button type="button" class="btn primary" id="dl">PNGを保存</button><button type="button" class="btn" id="cp">クリップボードにコピー</button></div>
+    <p class="note" id="cpMsg"></p>${SAVE_NOTE}`);
+  $('dl').onclick = () => c.toBlob(b => saveFile('poster.png', b, $('cpMsg'), 'この環境では保存ボタンを使えません。上の画像を右クリック(スマホは長押し)で保存するか、コピーを使ってください。'));
+  $('cp').onclick = () => c.toBlob(async b => {
+    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]); $('cpMsg').textContent = 'コピーしました。'; }
+    catch (e) { $('cpMsg').textContent = 'コピーできませんでした。画像を右クリックで保存してください。'; }
+  });
+};
+
+function makePdf(jpeg, w, h, pw, ph) {
+  const enc = new TextEncoder(), parts = [], offs = []; let len = 0;
+  const push = d => { const b = typeof d === 'string' ? enc.encode(d) : d; parts.push(b); len += b.length; };
+  const obj = (n, s) => { offs[n] = len; push(`${n} 0 obj\n${s}\nendobj\n`); };
+  push('%PDF-1.4\n');
+  obj(1, '<</Type/Catalog/Pages 2 0 R>>');
+  obj(2, '<</Type/Pages/Kids[3 0 R]/Count 1>>');
+  obj(3, `<</Type/Page/Parent 2 0 R/MediaBox[0 0 ${pw} ${ph}]/Resources<</XObject<</Im0 4 0 R>>>>/Contents 5 0 R>>`);
+  offs[4] = len;
+  push(`4 0 obj\n<</Type/XObject/Subtype/Image/Width ${w}/Height ${h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${jpeg.length}>>\nstream\n`);
+  push(jpeg); push('\nendstream\nendobj\n');
+  const cs = `q ${pw} 0 0 ${ph} 0 0 cm /Im0 Do Q`;
+  obj(5, `<</Length ${cs.length}>>\nstream\n${cs}\nendstream`);
+  const xref = len;
+  push(`xref\n0 6\n0000000000 65535 f \n${offs.slice(1).map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('')}trailer\n<</Size 6/Root 1 0 R>>\nstartxref\n${xref}\n%%EOF`);
+  return new Blob(parts, { type: 'application/pdf' });
+}
+$('expPdf').onclick = async () => {
+  const c = await renderFull(), d = dims(), jpg = c.toDataURL('image/jpeg', 0.92);
+  const bin = atob(jpg.split(',')[1]), bytes = Uint8Array.from(bin, ch => ch.charCodeAt(0));
+  const pw = d.mm ? d.mm[0] * 72 / 25.4 : d.w * 0.75, ph = d.mm ? d.mm[1] * 72 / 25.4 : d.h * 0.75;
+  const pdf = makePdf(bytes, c.width, c.height, pw.toFixed(2), ph.toFixed(2));
+  openModal('PDFを書き出し', `<img class="out" src="${jpg}" alt="PDFの内容"><p class="note">${d.label}${d.mm ? `(${d.mm[0]} × ${d.mm[1]} mm)` : ''} · 1ページ</p>
+    <div class="row"><button type="button" class="btn primary" id="dlPdf">PDFを保存</button></div><p class="note" id="pdfMsg"></p>`);
+  $('dlPdf').onclick = () => saveFile('poster.pdf', pdf, $('pdfMsg'), 'この環境ではPDFを保存できません。PNGを保存して印刷するか、ローカルの poster.html で書き出してください。');
+};
+
+$('expJson').onclick = () => {
+  openModal('編集状態の保存・読込', `<p class="note">下のテキストを保存しておけば、あとで貼り付けて復元できます。画像も含みます。</p>
+    <textarea id="js" aria-label="編集状態のJSON"></textarea>
+    <div class="row"><button type="button" class="btn" id="jsCopy">コピー</button><button type="button" class="btn primary" id="jsLoad">この内容を読み込む</button></div>
+    <label>ファイルから読み込む<input type="file" id="jsFile" accept=".json,application/json"></label><p class="note" id="jsMsg"></p>`);
+  $('js').value = JSON.stringify(S);
+  const load = t => {
+    try { S = { ...DEFAULTS, ...pick(JSON.parse(t)) }; syncUI(); setImg(S.img); closeModal(); }
+    catch (e) { $('jsMsg').textContent = '読み込めませんでした。保存したテキストをそのまま貼り付けてください。'; }
+  };
+  $('jsLoad').onclick = () => load($('js').value);
+  $('jsFile').onchange = e => e.target.files[0] && e.target.files[0].text().then(load);
+  $('jsCopy').onclick = async () => {
+    try { await navigator.clipboard.writeText($('js').value); $('jsMsg').textContent = 'コピーしました。'; }
+    catch (e) { $('js').select(); $('jsMsg').textContent = '選択しました。コピーしてください。'; }
+  };
+};
+
+syncUI(); setImg(S.img); schedule();
+</script>
+</body>
+</html>
